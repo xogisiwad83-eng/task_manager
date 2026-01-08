@@ -1,4 +1,6 @@
 import logging
+from calendar import error
+
 from observers.base import Observer
 from datetime import datetime
 from pathlib import Path
@@ -41,3 +43,24 @@ class LoggerObserver(Observer):
         """Логирование событий"""
         if event == "task_added":
             self.logger.info(f"Task added: {data['title']}")
+
+        elif event == 'task_updated':
+            self.logger.info(f'Task Updated: {data['title']}')
+
+        elif event == 'task_deleted':
+            self.logger.info(f'Task Deleted: {data['title']}')
+
+        elif event == 'task_completed':
+            self.logger.info(f'Task Completed: {data['title']}')
+
+        elif event == 'task_loaded':
+            self.logger.info(f'Loaded {data['count']} tasks')
+
+        elif event == 'task_saved':
+            self.logger.info(f'Saved {data['count']} tasks')
+        elif event == 'error':
+            self.logger.error(f'Error: {data['message']}')
+
+        else:
+            self.logger.info(f'Event {event}: {data}')
+
