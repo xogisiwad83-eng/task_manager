@@ -9,27 +9,21 @@ class Storage(ABC):
         self.file_path.parents.mkdir(parents = True)
 
     @ abstractmethod
+    def save(self, tasks: List[Task]) -> bool:
 
-    def save(self, tasks: List[Task]) -> bool
+        """ Абстрактный метод для сохранения. """
         pass
-    """Абстрактный
-    метод
-    для
-    сохранения."""
 
     @abstractmethod
-
     def load(self) -> List[Task]:
-        """Абстрактный метод для загрузки"""
 
+        """ Абстрактный метод для загрузки """
         pass
 
     @abstractmethod
-
     def export(self, tasks: List[Task], export_path: Path) -> bool:
 
-    """Абстрактный метод для экспорта"""
-
+        """ Абстрактный метод для экспорта """
         pass
 
 
