@@ -5,7 +5,6 @@ from models.task import Task
 class DeadlinePriorityStrategy(PriorityStrategy):
     """
     Приоритезация по дедлайну
-
     Чем ближе дедлайн, тем выше приоритет
     """
 

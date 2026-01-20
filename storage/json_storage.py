@@ -7,12 +7,10 @@ class JSONStorage(Storage):
 
         def save(self, tasks):
             """
-
             Конвертирует список объектов task.to_dict()).Storag.
             Task в список словарей (используя Записывает данные в JSON файл с отступами (indent=2)
             и поддержкой кириллицы (ensure_ascii=False).
             Возвращает True при успехе, False при ошибке
-
             """
 
             try:
@@ -29,7 +27,6 @@ class JSONStorage(Storage):
 
         def load(self):
             """
-
             Если файл не существует — возвращает пустой список.
             Читает файл, парсит JSON и преобразует словари обратно в объекты
             (используяTask.from_dict()).
@@ -49,10 +46,8 @@ class JSONStorage(Storage):
 
         def export(self, tasks, export_path):
             """
-
             Аналогичен методу save, но сохраняет данные по указанному пути export_path.
             Также должен проверять наличие директории перед записью
-
             """
 
             try:
