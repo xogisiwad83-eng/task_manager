@@ -119,8 +119,8 @@ class TaskManager:
             self.storage.save(self.tasks)
             self.notify_observers("tasks_saved", {})
             return True
-            except Exception as e:(
-                self.notify_observer("error", {"message": str(e)}))
+        except Exception as e:
+            self.notify_observer("error", {"message": str(e)})
             return False
 
     def get_task(self, task_id: str):
@@ -270,8 +270,8 @@ class TaskManager:
             exporter = storage_class(path)
             exporter.export(self.tasks)
             return True
-            except Exception as e:
-                self.notify_observer('error', {'message': str(e)})
+        except Exception as e:
+            self.notify_observer('error', {'message': str(e)})
             return False
 
     def get_history(self, limit: int = 50):
