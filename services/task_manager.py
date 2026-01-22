@@ -3,7 +3,7 @@ from typing import List, Dict
 from storage.base import Storage
 from models.task import Task
 from observers.base import Observer
-
+from datetime import datetime
 
 class TaskManager:
     """
@@ -85,7 +85,7 @@ class TaskManager:
 
     def delete_task(self, task_id: str):
         try:
-            task = self.get_task
+            task = self.get_task(task_id)
 
             self.tasks.remove(task)
             self._add_to_history("created", task)
@@ -103,20 +103,32 @@ class TaskManager:
 
 
     def _add_to_history(self, action: str, task: Task, old_state: dict = None):
-        pass
+        entry = {
+            'timestamp': datetime.now().isoformat(),
+            'action': action,
+            'task_id': task.id,
+            'task_title': task.title
+        }
+        if action == 'updated' and old_state:
+            entry['old_state'] = old_state
+            entry['new_state'] = task.to_dict()
+        self.history.append(entry)
 
     def save_tasks(self):
         try:
             self.storage.save(self.tasks)
             self.notify_observers("tasks_saved", {})
-        except Exception as e:
-            print(f"Error saving tasks: {e}")
+            return True
+            except Exception as e:(
+                self.notify_observer("error", {"message": str(e)}))
+            return False
 
-    def get_task(self):
+    def get_task(self, task_id: str):
         for task in self.tasks:
             if task.id == task_id:
                 return task
         return None
+
 
     def notify_observer(self, event: str, data: dict):
         for observer in self.observers:
@@ -161,8 +173,11 @@ class TaskManager:
             List[Task]: Найденные задачи
         """
         query_lower = query.lower()
+        results = []
         for task in self.tasks:
             if query_lower in task.title.lower() or query_lower in task.description.lower():
+                results.append(task)
+        return results
 
     def filter_tasks(self, filter_func: Callable[[Task], bool]) -> List[Task]:
         """
@@ -178,3 +193,90 @@ class TaskManager:
         Returns:
             List[Task]: Отфильтрованные задачи
         """
+        return [task for task in self.tasks if filter_func(task)]
+
+    def sort_tasks(self)
+        pass
+
+
+    def update_task(self, task_id: str, **kwargs) -> bool:
+        task = self.get_task(task_id)
+
+        if not task:
+            return False
+
+        try:
+            old_state = task.to_dict()
+            task.update(**kwargs)
+            self._add_to_history('updated', task, old_state)
+            self.save_tasks()
+            self.notify_observer('task_updated', {
+                'id': task_id,
+                'title': task.title,
+                'changes': kwargs
+            })
+            return True
+        except Exception as e:
+            self.notify_observer('error', {'message': str(e)})
+            return False
+
+    def complete_task(self, task_id: str) -> bool:
+        task = self.get_task(task_id)
+
+        if not task:
+            return False
+
+        task.mark_completed()
+        self._add_to_history('completed', task)
+        self.save_tasks()
+        self.notify_observer('task_completed', {
+            'id': task_id,
+            'title': task.title
+        })
+        return True
+
+    def get_statistics(self) -> dict:
+        total = len(self.tasks)
+        completed = len(self.get_completed_tasks())
+        uncompleted = total - completed
+        overdue = len(self.get_overdue_tasks())
+        return {
+            "total": total,
+            "completed": completed,
+            "uncompleted": uncompleted,
+            "overdue": overdue,
+            "competion_percent": (completed/total*100) if total else  0,
+            "by_priority": {
+                "high":(self.get_tasks_by_priority("high")),
+                "medium":(self.get_tasks_by_priority("medium")),
+                "low":(self.get_tasks_by_priority("low"))
+            },
+            "by_status": {
+                status: len(self.get_tasks_by_status(status))
+                for status in ["todo", "in_progress", "done", "cancelled"]
+            }
+        }
+
+    def load_task(self):
+        try:
+            self.tasks = self.storage.load()
+        except Exception:
+            self.tasks = []
+
+    def export_taks(self, format: str, path: str):
+        try:
+            module = importlib.import_module(f"storage.{format.lower()}")
+            storage_class = getattr(module, f"{format.upper()}Storage")
+            exporter = storage_class(path)
+            exporter.export(self.tasks)
+            return True
+            except Exception as e:
+                self.notify_observer('error', {'message': str(e)})
+            return False
+
+    def get_history(self, limit: int = 50):
+        return self.history[-limit:]
+
+    def clear_history(self):
+        self.history.clear()
+
