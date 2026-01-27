@@ -15,7 +15,7 @@ class Task:
     priority: Priority = Priority.MEDIUM
     deadline: Optional[datetime] = None
     status: TaskStatus = TaskStatus.TODO
-    complited: bool = False
+    completed: bool = False
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)

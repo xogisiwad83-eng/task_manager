@@ -3,12 +3,13 @@ from typing import List
 from pathlib import Path
 from models.task import Task
 
+
 class Storage(ABC):
     def __init__(self, file_path: Path):
         self.file_path = file_path
-        self.file_path.parents.mkdir(parents = True)
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    @ abstractmethod
+    @abstractmethod
     def save(self, tasks: List[Task]) -> bool:
 
         """ Абстрактный метод для сохранения. """

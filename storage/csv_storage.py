@@ -1,8 +1,9 @@
 import csv
 from typing import List
 from pathlib import Path
-from storage.base import Storage, export
+from storage.base import Storage
 from models.task import Task
+
 
 class CSVStorage(Storage):
     """Экспорт задач в CSV формате"""
