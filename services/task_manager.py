@@ -4,6 +4,11 @@ from storage.base import Storage
 from models.task import Task
 from observers.base import Observer
 from datetime import datetime
+from pathlib import Path
+
+from storage.csv_storage import CSVStorage
+from storage.json_storage import JSONStorage
+
 
 class TaskManager:
     """
@@ -68,6 +73,15 @@ class TaskManager:
                 print(f"Observer error: {e}")
 
     def add_task(self, task: Task) -> bool:
+        """
+                Добавляет новую задачу.
+
+                Args:
+                    task (Task): Объект задачи
+
+                Returns:
+                    bool: True если задача добавлена успешно, иначе False
+                """
         try:
             self.tasks.append(task)
             self._add_to_history("created", task)
@@ -84,13 +98,22 @@ class TaskManager:
             return False
 
     def delete_task(self, task_id: str):
+        """
+                Удаляет задачу по идентификатору.
+
+                Args:
+                    task_id (str): Идентификатор задачи
+
+                Returns:
+                    bool: True при успешном удалении, иначе False
+                """
         try:
             task = self.get_task(task_id)
 
             self.tasks.remove(task)
-            self._add_to_history("created", task)
-            self.save_tasks()
-            self.notify_observer('task_added', {
+            self._add_to_history("deleted", task)
+            self.tasks.remove(task)
+            self.notify_observers('task_deleted', {
                 'id': task.id,
                 'title': task.title
             })
@@ -103,6 +126,14 @@ class TaskManager:
 
 
     def _add_to_history(self, action: str, task: Task, old_state: dict = None):
+        """
+                Добавляет запись в историю изменений.
+
+                Args:
+                    action (str): Тип действия (created, updated, deleted и т.д.)
+                    task (Task): Задача, над которой выполнено действие
+                    old_state (dict, optional): Предыдущее состояние задачи
+                """
         entry = {
             'timestamp': datetime.now().isoformat(),
             'action': action,
@@ -115,6 +146,12 @@ class TaskManager:
         self.history.append(entry)
 
     def save_tasks(self):
+        """
+        Сохраняет текущие задачи в хранилище.
+
+        Returns:
+            bool: True при успешном сохранении
+        """
         try:
             self.storage.save(self.tasks)
             self.notify_observers("tasks_saved", {})
@@ -124,15 +161,19 @@ class TaskManager:
             return False
 
     def get_task(self, task_id: str):
+        """
+                Получает задачу по идентификатору.
+
+                Args:
+                    task_id (str): Идентификатор задачи
+
+                Returns:
+                    Task | None: Найденная задача или None
+                """
         for task in self.tasks:
             if task.id == task_id:
                 return task
         return None
-
-
-    def notify_observer(self, event: str, data: dict):
-        for observer in self.observers:
-            observer.update(event, data)
 
     def get_all_tasks(self) -> List[Task]:
         """Получить все задачи"""
@@ -195,11 +236,40 @@ class TaskManager:
         """
         return [task for task in self.tasks if filter_func(task)]
 
-    def sort_tasks(self)
-        pass
+    def sort_tasks(self, tasks = None, strategy = None , reverse = True):
+        """
+            Сортировка задач с использованием стратегии или по дате создания
+
+            Args:
+                tasks: Список задач для сортировки (если None — все задачи)
+                strategy: Стратегия приоритизации (опционально)
+                reverse: Направление сортировки
+
+            Returns:
+                List[Task]: Отсортированные задачи
+            """
+        tasks_to_sort = tasks if tasks is not None else self.tasks
+
+        if strategy:
+            return sorted(
+                tasks_to_sort,
+                key=lambda task: strategy.calculate_priority(task),
+                reverse=reverse
+            )
+
 
 
     def update_task(self, task_id: str, **kwargs) -> bool:
+        """
+           Обновляет параметры задачи.
+
+           Args:
+               task_id (str): Идентификатор задачи
+               **kwargs: Поля задачи и их новые значения
+
+           Returns:
+               bool: True если задача успешно обновлена, иначе False
+           """
         task = self.get_task(task_id)
 
         if not task:
@@ -221,6 +291,15 @@ class TaskManager:
             return False
 
     def complete_task(self, task_id: str) -> bool:
+        """
+           Отмечает задачу как выполненную.
+
+           Args:
+               task_id (str): Идентификатор задачи
+
+           Returns:
+               bool: True если задача успешно завершена, иначе False
+           """
         task = self.get_task(task_id)
 
         if not task:
@@ -236,6 +315,19 @@ class TaskManager:
         return True
 
     def get_statistics(self) -> dict:
+        """
+            Возвращает статистику по задачам.
+
+            Включает:
+            - общее количество задач
+            - количество выполненных и невыполненных
+            - количество просроченных
+            - процент выполнения
+            - распределение по приоритетам и статусам
+
+            Returns:
+                dict: Статистическая информация по задачам
+            """
         total = len(self.tasks)
         completed = len(self.get_completed_tasks())
         uncompleted = total - completed
@@ -258,25 +350,66 @@ class TaskManager:
         }
 
     def load_task(self):
+        """
+           Загружает задачи из хранилища.
+
+           Перезаписывает текущий список задач и уведомляет наблюдателей.
+
+           Returns:
+               bool: True при успешной загрузке, иначе False
+           """
         try:
             self.tasks = self.storage.load()
-        except Exception:
-            self.tasks = []
-
-    def export_taks(self, format: str, path: str):
-        try:
-            module = importlib.import_module(f"storage.{format.lower()}")
-            storage_class = getattr(module, f"{format.upper()}Storage")
-            exporter = storage_class(path)
-            exporter.export(self.tasks)
+            self.notify_observer("task_loaded", {
+                "count": len(self.tasks)
+            })
             return True
         except Exception as e:
             self.notify_observer('error', {'message': str(e)})
             return False
 
-    def get_history(self, limit: int = 50):
+    def export_tasks(self, format: str, path: Path):
+        """
+           Экспортирует задачи в файл указанного формата.
+
+           Поддерживаемые форматы:
+           - json
+           - csv
+
+           Args:
+               format (str): Формат экспорта ('json' или 'csv')
+               path (Path): Путь к файлу экспорта
+
+           Returns:
+               bool: True при успешном экспорте, иначе False
+           """
+        try:
+            if format == "json":
+                storage = JSONStorage(path)
+            elif format == "csv":
+                storage = CSVStorage(path)
+            else:
+                raise ValueError(f"Неизвестный формат {format}")
+            return storage.export(self.tasks, path)
+        except Exception as e:
+            self.notify_observer('error', {'message': str(e)})
+            return False
+
+    def get_history(self, limit: int = 50) -> list[dict]:
+        """
+            Возвращает историю действий над задачами.
+
+            Args:
+                limit (int): Максимальное количество записей
+
+            Returns:
+                list[dict]: Список записей истории
+            """
         return self.history[-limit:]
 
     def clear_history(self):
+        """
+           Полностью очищает историю изменений задач.
+           """
         self.history.clear()
 
