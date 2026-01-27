@@ -5,6 +5,8 @@ from models.task import Task
 from observers.base import Observer
 from datetime import datetime
 from pathlib import Path
+from models.enums import Priority, TaskStatus
+from typing import Callable
 
 from storage.csv_storage import CSVStorage
 from storage.json_storage import JSONStorage
@@ -86,13 +88,13 @@ class TaskManager:
             self.tasks.append(task)
             self._add_to_history("created", task)
             self.save_tasks()
-            self.notify_observer('task_added', {
+            self.notify_observers('task_added', {
                 'id': task.id,
                 'title': task.title
             })
             return True
         except Exception as e:
-            self.notify_observer('error', {
+            self.notify_observers('error', {
                 'message': str(e)
             })
             return False
@@ -236,7 +238,7 @@ class TaskManager:
         """
         return [task for task in self.tasks if filter_func(task)]
 
-    def sort_tasks(self, tasks = None, strategy = None , reverse = True):
+    def sort_tasks(self, tasks=None, strategy=None , reverse=True):
         """
             Сортировка задач с использованием стратегии или по дате создания
 
