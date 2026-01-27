@@ -256,6 +256,8 @@ class TaskManager:
                 key=lambda task: strategy.calculate_priority(task),
                 reverse=reverse
             )
+        else:
+            return sorted(tasks_to_sort, key=lambda  task: task.created_at, reverse=reverse)
 
 
 
