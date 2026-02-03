@@ -114,7 +114,7 @@ class TaskManager:
 
             self.tasks.remove(task)
             self._add_to_history("deleted", task)
-            self.tasks.remove(task)
+            self.save_tasks()
             self.notify_observers('task_deleted', {
                 'id': task.id,
                 'title': task.title
@@ -353,7 +353,7 @@ class TaskManager:
             }
         }
 
-    def load_task(self):
+    def load_tasks(self):
         """
            Загружает задачи из хранилища.
 
